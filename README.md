@@ -1,5 +1,8 @@
 # leetcode-AI-assistant
 
+![Alt text](\demo\ui (1).png)
+
+
 ### How the `/ask` Endpoint Works:
 
 1. **Request Handling**:
