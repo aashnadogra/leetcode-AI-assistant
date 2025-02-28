@@ -1,6 +1,6 @@
 # leetcode-AI-assistant
 
-![Alt text](\demo\ui (1).png)
+![Alt text](demo/ui%20(1).png)
 
 
 ### How the `/ask` Endpoint Works:
