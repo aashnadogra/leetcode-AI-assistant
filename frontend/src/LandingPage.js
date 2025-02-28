@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './LandingPage.css';
+import promptSelector from './promptSelector';
 
 const LandingPage = () => {
   // URL and initial doubt input
@@ -12,7 +13,13 @@ const LandingPage = () => {
   const [chatStarted, setChatStarted] = useState(false);
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
-
+  
+  // Problem context state
+  const [problemDescription, setProblemDescription] = useState("");
+  const [detectedProblemType, setDetectedProblemType] = useState(null);
+  const [hintLevel, setHintLevel] = useState("gentle"); // gentle, moderate, direct
+  const [hasAskedProblemType, setHasAskedProblemType] = useState(false);
+  
   // Reference for auto-scrolling chat
   const messagesEndRef = useRef(null);
 
@@ -35,11 +42,18 @@ const LandingPage = () => {
         doubt: "Please analyze this problem briefly.",
       });
       
-      // Start chat with welcoming message
+      // Store problem description for context
+      setProblemDescription(res.data.response);
+      
+      // Detect problem type from description but don't reveal it
+      const problemType = promptSelector.detectProblemType(res.data.response);
+      setDetectedProblemType(problemType);
+      
+      // Start chat with welcoming message - don't mention problem type
       const systemMessage = {
         id: Date.now(),
         sender: 'assistant',
-        text: "Hey there! I'll help you solve this LeetCode problem. What's giving you trouble?",
+        text: "Hey there! I'll help you solve this problem. What specific part is giving you trouble?",
         timestamp: new Date().toISOString()
       };
       
@@ -79,46 +93,68 @@ const LandingPage = () => {
     
     setLoading(true);
     
+    // Update hint level based on conversation progress and user's question
+    updateHintLevel(messageText);
+    
+    // Check if user is asking about problem type
+    const isAskingProblemType = messageText.toLowerCase().includes("problem type") || 
+                               messageText.toLowerCase().includes("what type") ||
+                               messageText.toLowerCase().includes("category");
+    
+    if (isAskingProblemType) {
+      setHasAskedProblemType(true);
+    }
+    
     try {
-      // Send the message to backend
+      // Get conversation context for prompt construction
+      const conversationContext = messages.map(m => `${m.sender}: ${m.text}`).join('\n');
+      
+      // Create structured prompt based on problem type, question, and conversation stage
+      const promptInfo = promptSelector.createStructuredPrompt(
+        problemDescription, 
+        messageText, 
+        conversationContext
+      );
+      
+      // Construct model instructions with appropriate guidance template
+      let promptPrefix = `You are a helpful and encouraging LeetCode mentor. 
+Your goal is to guide the student through solving the problem themselves, not just give away the answer.
+Keep your responses concise - 1-3 sentences when possible.
+Current teaching stage: ${promptInfo.stage}.
+Guidance level: ${promptInfo.hintLevel}.
+
+Use this guidance approach: ${promptInfo.promptTemplate}`;
+
+      // Only mention problem type if user has explicitly asked
+      if (hasAskedProblemType && isAskingProblemType) {
+        promptPrefix += `\n\nThey're asking about the problem type. You can tell them this appears to be a ${promptInfo.problemType.primaryType} problem, and briefly explain why.`;
+      } else {
+        promptPrefix += `\n\nDo NOT explicitly mention the problem type (${promptInfo.problemType.primaryType}) unless they specifically ask.`;
+      }
+      
+      promptPrefix += `\n\nNow respond very concisely to the student's question: "${messageText}"`;
+      
+      // Send the message to backend with structured prompt
       const res = await axios.post("http://127.0.0.1:8000/ask", {
         url,
         doubt: messageText,
-        context: messages.map(m => `${m.sender}: ${m.text}`).join('\n')
+        context: conversationContext,
+        promptPrefix: promptPrefix
       });
       
-      // Process response to make it more conversational and shorter
-      const rawResponse = res.data.response;
-      let processedResponse = rawResponse;
-      
-      // If response is too long, trim it and make it more concise
-      if (rawResponse.length > 500) {
-        // Extract key points and create a shorter response
-        const sentences = rawResponse.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      // Process response to make it more concise if needed
+      let processedResponse = res.data.response;
+      if (processedResponse.length > 250 && !messageText.toLowerCase().includes("explain")) {
+        // Extract key sentences for a shorter response
+        const sentences = processedResponse.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
         
         if (sentences.length > 3) {
-          // Take first sentence and a couple key sentences from the middle/end
-          processedResponse = sentences[0] + '. ' + 
-                             sentences[Math.floor(sentences.length / 2)] + '. ' +
-                             sentences[sentences.length - 1] + '.';
+          // Take first sentence and a couple key sentences
+          processedResponse = sentences[0] + ' ' + 
+                             sentences[Math.floor(sentences.length / 2)] + ' ' +
+                             sentences[sentences.length - 1];
         }
       }
-      
-      // Add conversational elements
-      const conversationalPhrases = [
-        "Let's think about this...",
-        "Here's what I'd suggest:",
-        "Have you considered this approach?",
-        "Let me simplify this for you.",
-        "Think of it this way:",
-        "The key insight here is:",
-        "Let's break this down:",
-        "I see what's happening.",
-        "Try to visualize it like this:"
-      ];
-      
-      const randomPhrase = conversationalPhrases[Math.floor(Math.random() * conversationalPhrases.length)];
-      processedResponse = randomPhrase + " " + processedResponse;
       
       // Add assistant response
       const assistantMessage = {
@@ -147,44 +183,25 @@ const LandingPage = () => {
     setLoading(false);
   };
 
-  // Function to add follow-up question based on conversation context
-  const addFollowUpQuestion = () => {
-    const followUps = [
-      "Need me to explain any part of this further?",
-      "Does that make sense?",
-      "Want to try implementing this approach?",
-      "Shall we go through another example?",
-      "What part are you stuck on?",
-      "Any questions about this solution?"
-    ];
+  // Update hint level based on conversation progress and question content
+  const updateHintLevel = (question) => {
+    const lowerQuestion = question.toLowerCase();
     
-    const randomFollowUp = followUps[Math.floor(Math.random() * followUps.length)];
-    
-    // Only add follow-up every few messages to avoid being annoying
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage && lastMessage.sender === 'assistant' && messages.length % 3 === 0) {
-      setMessages(prevMessages => [
-        ...prevMessages,
-        {
-          id: Date.now(),
-          sender: 'assistant',
-          text: randomFollowUp,
-          timestamp: new Date().toISOString()
-        }
-      ]);
+    // Progress hint level based on specific requests or conversation length
+    if (messages.length > 8 || 
+        lowerQuestion.includes("just tell me") || 
+        lowerQuestion.includes("give me the answer") ||
+        lowerQuestion.includes("very stuck")) {
+      setHintLevel("direct");
+    } else if (messages.length > 4 || 
+               lowerQuestion.includes("more hint") || 
+               lowerQuestion.includes("another hint") ||
+               lowerQuestion.includes("still confused")) {
+      setHintLevel("moderate");
+    } else {
+      setHintLevel("gentle");
     }
   };
-
-  // Add occasional follow-up questions
-  useEffect(() => {
-    if (messages.length > 0 && messages[messages.length - 1].sender === 'assistant') {
-      const timer = setTimeout(() => {
-        addFollowUpQuestion();
-      }, 10000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [messages]);
 
   return (
     <div className="landing-page">
@@ -192,7 +209,7 @@ const LandingPage = () => {
       
       <div className="content-container">
         <div className="left-content">
-          <div className="branding">AASHNA DOGRA</div>
+        <div className="branding">AASHNA DOGRA</div>
           
           <h1 className="headline">
             AI problem solving assistant
