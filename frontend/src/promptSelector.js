@@ -1,5 +1,5 @@
 // promptSelector.js
-import promptTemplates from './promptTemplates';
+import promptTemplates from './promptTemplates.js';
 
 // Helper to detect likely problem type from problem description and conversation
 export const detectProblemType = (problemDescription, conversation = "") => {

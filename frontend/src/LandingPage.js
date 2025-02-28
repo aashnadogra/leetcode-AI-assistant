@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './LandingPage.css';
-import promptSelector from './promptSelector';
+import promptSelector from './promptSelector.js';
 
 const LandingPage = () => {
-  // URL and initial doubt input
   const [url, setUrl] = useState("");
   const [initialDoubt, setInitialDoubt] = useState("");
   const [loading, setLoading] = useState(false);
-  
+ 
   // Chat state
   const [chatStarted, setChatStarted] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -29,6 +28,43 @@ const LandingPage = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Extract key sentences to make responses more concise
+  const extractSentences = async (inputText) => {
+    try {
+        const response = await fetch("http://localhost:8000/nlp", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ text: inputText }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch response from backend");
+        }
+
+        let processedResponse = await response.json(); // ✅ Convert response to JSON
+
+        if (processedResponse.length > 250 && !inputText.toLowerCase().includes("explain")) {
+            try {
+                const shortenedResponse = await extractSentences(processedResponse);
+                if (shortenedResponse) {
+                    processedResponse = shortenedResponse;
+                }
+            } catch (error) {
+                console.error("Failed to process response:", error);
+            }
+        }
+
+        return processedResponse; 
+
+    } catch (error) {
+        console.error("Error extracting sentences:", error);
+        return null;
+    }
+};
+
 
   // Handle initial form submission
   const handleInitialSubmit = async (e) => {
@@ -143,24 +179,26 @@ Use this guidance approach: ${promptInfo.promptTemplate}`;
       });
       
       // Process response to make it more concise if needed
-      let processedResponse = res.data.response;
+      let processedResponse = res.data.response || "";
+      
+      // Only process longer responses that aren't explicit explanation requests
       if (processedResponse.length > 250 && !messageText.toLowerCase().includes("explain")) {
-        // Extract key sentences for a shorter response
-        const sentences = processedResponse.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
-        
-        if (sentences.length > 3) {
-          // Take first sentence and a couple key sentences
-          processedResponse = sentences[0] + ' ' + 
-                             sentences[Math.floor(sentences.length / 2)] + ' ' +
-                             sentences[sentences.length - 1];
+        try {
+          const shortenedResponse = await extractSentences(processedResponse);
+          if (shortenedResponse) {
+            processedResponse = shortenedResponse;
+          }
+        } catch (error) {
+          console.error("Failed to process response:", error);
+          // Continue with original response if processing fails
         }
       }
       
-      // Add assistant response
+      // Add assistant response with null check
       const assistantMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        text: processedResponse,
+        text: processedResponse || "I couldn't process your request. Let's try again.",
         timestamp: new Date().toISOString()
       };
       
@@ -203,13 +241,34 @@ Use this guidance approach: ${promptInfo.promptTemplate}`;
     }
   };
 
+  // Safe render for message text
+  const renderMessageText = (text) => {
+    if (!text) return <p>No message content</p>;
+
+    // If text is an object, try to extract the key_sentences field
+    if (typeof text === "object" && text.key_sentences) {
+        text = text.key_sentences; 
+    }
+
+    // Ensure it's now a string before splitting
+    if (typeof text !== "string") {
+        console.error("Expected a string but got:", text);
+        return <p>No message content</p>;
+    }
+
+    return text.split('\n').map((line, i) => (
+      <p key={i}>{line || ' '}</p>
+    ));
+};
+
+
   return (
     <div className="landing-page">
       <div className="background-overlay"></div>
       
       <div className="content-container">
         <div className="left-content">
-        <div className="branding">AASHNA DOGRA</div>
+          <div className="branding">AASHNA DOGRA</div>
           
           <h1 className="headline">
             AI problem solving assistant
@@ -293,9 +352,7 @@ Use this guidance approach: ${promptInfo.promptTemplate}`;
                     className={`message ${message.sender}-message`}
                   >
                     <div className="message-content">
-                      {message.text.split('\n').map((line, i) => (
-                        <p key={i}>{line}</p>
-                      ))}
+                      {renderMessageText(message.text)}
                     </div>
                     <div className="message-timestamp">
                       {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}

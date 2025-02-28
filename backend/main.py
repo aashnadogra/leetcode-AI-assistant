@@ -2,9 +2,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import google.generativeai as genai
 from fastapi.middleware.cors import CORSMiddleware
+import spacy
+import os
+from dotenv import load_dotenv
 
-# Load and configure Gemini API Key
-API_KEY = ""  
+load_dotenv()
+
+API_KEY = os.getenv("GEMINI_API_KEY") 
+if not API_KEY:
+    raise ValueError("GEMINI_API_KEY is not set")
 genai.configure(api_key=API_KEY)
 
 app = FastAPI()
@@ -12,12 +18,12 @@ app = FastAPI()
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (change for production)
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+nlp = spacy.load("en_core_web_sm")
 # Request body model
 class Query(BaseModel):
     url: str
@@ -45,3 +51,21 @@ async def ask_gpt(query: Query):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# Define input data model
+class TextInput(BaseModel):
+    text: str
+    
+@app.post("/nlp")
+async def extract_key_sentences(input_data: TextInput):
+    text = input_data.text
+    keyword_list = ["important", "key idea", "main concept", "critical"]
+    
+    doc = nlp(text)
+    key_sentences = [sent.text for sent in doc.sents if any(word in sent.text.lower() for word in keyword_list)]
+    
+    if not key_sentences:
+        key_sentences = [sent.text for sent in list(doc.sents)[:2]]
+
+    return {"key_sentences": " ".join(key_sentences)}
