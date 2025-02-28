@@ -1,70 +1,59 @@
-# Getting Started with Create React App
+api_endpoints:
+  - path: "/ask"
+    description: "Handles AI-driven responses for LeetCode problem-solving inquiries."
+    request:
+      method: "POST"
+      body:
+        type: "Query"
+        fields:
+          url: "LeetCode problem URL."
+          doubt: "User's specific question."
+    process:
+      - "Constructs a templated prompt including the problem URL and user query."
+      - "Encourages AI to provide hints rather than direct solutions."
+      - "Initializes the Gemini 1.5 Flash model to generate a response."
+      - "Returns a JSON response containing the AI-generated hint."
+    error_handling:
+      - "Catches any exceptions that occur during processing."
+      - "Returns an HTTP 500 error with exception details if needed."
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+  - path: "/nlp"
+    description: "Extracts key sentences from a given text using NLP techniques."
+    request:
+      method: "POST"
+      body:
+        type: "TextInput"
+        fields:
+          text: "Text content to analyze."
+    process:
+      - "Loads spaCy model ('en_core_web_sm')."
+      - "Defines a list of keywords indicating important sentences."
+      - "Filters sentences containing these keywords."
+      - "If no keywords are found, selects the first two sentences."
+      - "Returns extracted key sentences as a JSON response."
+    error_handling:
+      - "Ensures a fallback mechanism for cases where no keywords are detected."
 
-## Available Scripts
+workflow:
+  - "User sends a message in the chat."
+  - "Frontend calls `/ask` endpoint to get an AI-generated response."
+  - "If the response exceeds 250 characters, the `/nlp` endpoint condenses it."
+  - "If 'explain' is in the request, a detailed response is returned instead."
 
-In the project directory, you can run:
+modules:
+  promptSelector.js:
+    description: "Detects problem type (arrays, trees, DP, etc.) to provide specialized hints."
+  promptTemplates.js:
+    description: "Contains structured prompts for different problem categories."
 
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+features:
+  - problem_specific_guidance:
+      description: "AI responses are tailored based on detected problem type."
+  - dynamic_response_adaptation:
+      description: "Hints progress from gentle to direct based on conversation flow."
+  - structured_prompt_engineering:
+      example:
+        - "promptPrefix = `You are a helpful LeetCode mentor...`"
+        - "Uses guidance level and teaching stage for tailored responses."
+  - conversation_stage_tracking:
+      description: "System tracks user progress and adjusts responses accordingly."
