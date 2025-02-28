@@ -131,3 +131,6 @@ This two-step process allows the application to:
 - **Conversation Stage Tracking**:
     - The system detects what stage the learner is in (introduction, hint, walkthrough, etc.)
     - This allows targeted guidance appropriate to where they are in the problem-solving journey
+
+
+In all this model walks the user through the solution with gradually increasing hints based on keywords used by user and chat history. It undersatands according the the chat length if a gentle or direct hint is to be given and using the promptSelector it is able to give good prompts to Gemini model so it can respond accordingly without directly solving the question. 
