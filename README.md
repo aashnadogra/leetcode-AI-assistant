@@ -2,6 +2,50 @@
 
 ![Alt text](demo/ui%20(1).png)
 
+# Project Setup Guide
+
+Follow these steps to set up and run the project locally.
+
+## Clone the Repository  
+Open a terminal and run:
+
+```sh
+git clone https://github.com/aashnadogra/leetcode-AI-assistant.git
+cd leetcode-AI-assistant.git
+```
+
+## Frontend Setup
+```sh
+cd frontend
+npm install
+npm start
+```
+
+## Backend Setup
+```sh
+cd backend
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+```
+## Generate API Key for Gemini
+
+Visit Google AI Studio.
+Generate an API key for Gemini.
+Copy the API key.
+
+## Set Up .env File
+Create a .env file in the backend directory and add the following line:
+```sh
+GEMINI_API_KEY="your_key_here"
+```
+Replace "your_key_here" with the API key you generated.
+
+## Run the Backend
+```sh
+uvicorn main:app --reload
+```
+This will start the FastAPI backend.
+
 
 ### How the `/ask` Endpoint Works:
 
@@ -72,8 +116,7 @@ This two-step process allows the application to:
     - The frontend constructs specialized prompts like this:
         
         ```jsx
-        javascript
-        Copy
+        
         let promptPrefix = `You are a helpful and encouraging LeetCode mentor.
         Your goal is to guide the student through solving the problem themselves, not just give away the answer.
         Keep your responses concise - 1-3 sentences when possible.
