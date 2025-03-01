@@ -49,19 +49,18 @@ export const detectProblemType = (problemDescription, conversation = "") => {
   };
 };
 
-// Get appropriate prompts based on problem type, conversation stage, and hint level
-export const getPrompts = (problemType, stage, hintLevel = "moderate") => {
+export const getPrompts = (problemType, stage, hintLevel = "moderate", options = {}) => {
   const { primaryType, secondaryType } = problemType;
-  
+
   // Select templates based on primary and secondary types
   const primaryTemplate = promptTemplates[primaryType] || promptTemplates.general;
-  const secondaryTemplate = primaryType !== secondaryType ? 
+  const secondaryTemplate = primaryType !== secondaryType && secondaryType ?
     promptTemplates[secondaryType] : null;
-  
-  switch(stage) {
+
+  switch (stage) {
     case "introduction":
       return primaryTemplate.introduction;
-    
+
     case "hint":
       if (primaryTemplate.hints && primaryTemplate.hints.length > 0) {
         // Select a random hint
@@ -69,28 +68,53 @@ export const getPrompts = (problemType, stage, hintLevel = "moderate") => {
         return primaryTemplate.hints[randomIndex];
       }
       return promptTemplates.general.hintLevels[hintLevel];
-    
+
     case "walkthrough":
       return primaryTemplate.walkthrough;
-    
+
     case "mistake":
       if (primaryTemplate.common_mistakes && primaryTemplate.common_mistakes.length > 0) {
         const randomIndex = Math.floor(Math.random() * primaryTemplate.common_mistakes.length);
         return primaryTemplate.common_mistakes[randomIndex];
       }
       return null;
-    
+
     case "stuck":
       const stuckPrompts = promptTemplates.general.stuckPrompts;
       const randomIndex = Math.floor(Math.random() * stuckPrompts.length);
       return stuckPrompts[randomIndex];
-    
+
     case "concept":
       return promptTemplates.general.conceptualExplanation;
-      
+
     case "timeComplexity":
       return promptTemplates.general.timeComplexityExplanation;
-    
+
+    case "initialAnalysis":
+      if (primaryTemplate.getPrompt) {
+        return primaryTemplate.getPrompt("initialAnalysis", options);
+      } else {
+        return promptTemplates.general.getPrompt("initialAnalysis", options);
+      }
+    case "stuckUsers":
+      if (primaryTemplate.getPrompt) {
+        return primaryTemplate.getPrompt("stuckUsers", options);
+      } else {
+        return promptTemplates.general.getPrompt("stuckUsers", options);
+      }
+    case "codeReview":
+      return promptTemplates.general.getPrompt("codeReview", options);
+    case "timeComplexityOptimization":
+      return promptTemplates.general.getPrompt("timeComplexityOptimization", options);
+    case "progressiveHint":
+      return promptTemplates.general.getPrompt("progressiveHint", options);
+    case "multipleApproaches":
+      if (primaryTemplate.getPrompt) {
+        return primaryTemplate.getPrompt("multipleApproaches", options);
+      } else {
+        return promptTemplates.general.getPrompt("multipleApproaches", options);
+      }
+
     default:
       return promptTemplates.general.conceptualExplanation;
   }
