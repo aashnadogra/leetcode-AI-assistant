@@ -175,4 +175,7 @@ Present these as options for me to explore rather than dictating a single "right
 9. User successfully optimizes solution
 
 
-## In all prompts are saved as templates with different walkthroughs suggested and a clear understanding laid so the AI model being used understands how to answer the question. These prompts are selectedon the basis of what data structure is being used, is the question regarding complexity, level of the user. Then we use nlp libraries to shorten responses so it gives more of a conversation chat feel to the user.
+## Summary of my implementation
+```
+In all prompts are saved as templates with different walkthroughs suggested and a clear understanding laid so the AI model being used understands how to answer the question. These prompts are selected on the basis of the level of the user, is the question regarding complexity, general walkthroughs and mistakes on that particular data structure related problems. Then I've use nlp libraries to shorten responses so it gives more of a conversation chat feel to the user.
+```
