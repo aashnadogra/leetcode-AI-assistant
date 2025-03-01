@@ -173,3 +173,6 @@ Present these as options for me to explore rather than dictating a single "right
 7. User requests optimization guidance
 8. Assistant provides targeted optimization hints using Time Complexity Optimization Prompt
 9. User successfully optimizes solution
+
+
+## In all prompts are saved as templates with different walkthroughs suggested and a clear understanding laid so the AI model being used understands how to answer the question. These prompts are selectedon the basis of what data structure is being used, is the question regarding complexity, level of the user. Then we use nlp libraries to shorten responses so it gives more of a conversation chat feel to the user.
