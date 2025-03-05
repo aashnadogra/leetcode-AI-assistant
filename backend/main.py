@@ -60,12 +60,12 @@ class TextInput(BaseModel):
 @app.post("/nlp")
 async def extract_key_sentences(input_data: TextInput):
     text = input_data.text
-    keyword_list = ["important", "key idea", "main concept", "critical"]
+    keyword_list = ["important", "key idea", "main concept", "critical", "consider", "example"]
     
     doc = nlp(text)
     key_sentences = [sent.text for sent in doc.sents if any(word in sent.text.lower() for word in keyword_list)]
     
     if not key_sentences:
-        key_sentences = [sent.text for sent in list(doc.sents)[:2]]
+        key_sentences = [sent.text for sent in list(doc.sents)[:6]]
 
     return {"key_sentences": " ".join(key_sentences)}
